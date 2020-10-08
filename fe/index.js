@@ -56,20 +56,32 @@ function get_img(id)
         return get_img.list[id % get_img.list.length];
 }
 
-function posToPixels(pos) {
-        return [pos[0], dev_canvas.height-pos[1]];
+function posToPixels(pos, border) {
+        var np = [pos[0], dev_canvas.height-pos[1]];
+        var real_position = true;
+        if (border > 0) {
+                np[0] = Math.max(border/2, Math.min(dev_canvas.width-border/2, np[0]));
+                np[1] = Math.max(border, Math.min(dev_canvas.height-border, pos[1]));
+        }
+        if (pos[0] != np[0] || pos[1] != np[1])
+                real_position = false;
+        return [np, real_position];
 }
 
 const drawDevices = () => {
         const SIZE = 50
         var date = new Date();
-        let devs = zone.get_all_devices_position(date.getTime());
+        let devs = zone.get_all_devices_position(date.getTime()); 
         ctx.fillStyle = "#121540";
         ctx.font = "25px Arial";
         ctx.textAlign = "center";
 
         devs.forEach((elem) => {
-                let pos = posToPixels(elem.pos.cord);
+                let [pos, real_position] = posToPixels(elem.pos.cord, SIZE);
+                if (real_position)
+                        ctx.globalAlpha = 1.0;
+                else
+                        ctx.globalAlpha = 0.7;
                 ctx.drawImage(get_img(elem.id), pos[0] - SIZE / 2, pos[1] - SIZE, SIZE, SIZE);
                 ctx.fillText(elem.id, pos[0], pos[1] + 25);
         });
