@@ -3,7 +3,6 @@ extern crate js_sys;
 
 use std::cmp::{max, min};
 use std::collections::VecDeque;
-use std::time::{SystemTime, UNIX_EPOCH};
 use wasm_bindgen::prelude::*;
 use serde::{Serialize, Deserialize};
 
@@ -45,11 +44,6 @@ macro_rules! console_error {
     // Note that this is using the `log` function imported above during
     // `bare_bones`
     ($($t:tt)*) => (error(&format_args!($($t)*).to_string()))
-}
-
-#[wasm_bindgen]
-pub fn greet() {
-    alert("Hello, rtls!");
 }
 
 //
@@ -309,12 +303,4 @@ pub fn init() -> Zone {
     let test_device = DeviceData::new(0);
     zone.devices.push(test_device);
     zone
-}
-
-fn timestamp() -> u32 {
-    let start = SystemTime::now();
-    let since_the_epoch = start
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards").as_millis();
-    since_the_epoch as u32
 }
