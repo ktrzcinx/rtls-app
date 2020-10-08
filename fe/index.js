@@ -69,8 +69,9 @@ function getStartOffsets(offset_pix, resolution) {
 }
 
 const drawGrid = () => {
+        ctx.save();
         ctx.beginPath();
-        ctx.strokeStyle = "#CCCCCC";
+        ctx.strokeStyle = "#EEEEEE";
         ctx.font = "12px Arial";
         ctx.textAlign = "left";
         let resolution = getLegendResolition();
@@ -99,6 +100,7 @@ const drawGrid = () => {
         ctx.lineTo(0, 0);
 
         ctx.stroke();
+        ctx.restore();
 }
 
 function get_img(id)
@@ -148,7 +150,8 @@ function stickToBorders(pos, border) {
 const drawDevices = () => {
         const SIZE = 50
         var date = new Date();
-        let devs = zone.get_all_devices_position(date.getTime()); 
+        let devs = zone.get_all_devices_position(date.getTime());
+        ctx.save();
         ctx.fillStyle = "#121540";
         ctx.font = "25px Arial";
         ctx.textAlign = "center";
@@ -162,9 +165,9 @@ const drawDevices = () => {
                         ctx.globalAlpha = 0.7;
                 ctx.drawImage(get_img(elem.id), pos[0] - SIZE / 2, pos[1] - SIZE, SIZE, SIZE);
                 ctx.fillText(elem.id, pos[0], pos[1] + 25);
+                ctx.fillText(Math.round(elem.pos.cord[0]) + ":" + Math.round(elem.pos.cord[1]), pos[0], pos[1] + 45);
         });
-
-        ctx.stroke()
+        ctx.restore();
 }
 
 const renderLoop = () => {
