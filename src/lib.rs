@@ -9,8 +9,31 @@ use wasm_bindgen::prelude::*;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
-extern {
-    fn alert(s: &str);
+extern "C" {
+  // Use `js_namespace` here to bind `console.log(..)` instead of just
+  // `log(..)`
+  #[wasm_bindgen(js_namespace = console)]
+  pub fn log(s: &str);
+
+  #[wasm_bindgen(js_namespace = console)]
+  pub fn error(s: &str);
+
+  #[wasm_bindgen(js_namespace = console)]
+  pub fn time(s: &str);
+
+  #[wasm_bindgen(js_namespace = console)]
+  pub fn timeEnd(s: &str);
+
+  #[wasm_bindgen(js_namespace = console)]
+  pub fn timeLog(s: &str, v: &str);
+
+  pub fn alert(s: &str);
+}
+
+macro_rules! console_log {
+    // Note that this is using the `log` function imported above during
+    // `bare_bones`
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
 #[wasm_bindgen]
