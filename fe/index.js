@@ -28,7 +28,7 @@ dev_canvas.onwheel = (event) => {
 dev_canvas.onmousedown = () => {
         map.moving = true;
 }
-dev_canvas.onmouseup = () => {
+document.body.onmouseup = () => {
         map.moving = false;
 }
 dev_canvas.onmousemove = (event) => {
