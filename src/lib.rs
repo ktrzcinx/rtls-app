@@ -259,7 +259,6 @@ impl Zone {
         };
         match ml {
             Some(l) => {
-                console_log!("Measure update {}-{} {}!", id[0], id[1], meas.distance);
                 l.update(meas);
                 for &i in id.iter() {
                     self.update_dev_position(i, timestamp);
