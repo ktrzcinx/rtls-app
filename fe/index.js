@@ -18,8 +18,12 @@ zone.add_measure(1, 2, 220, 127);
 var map = {zoom:0.5, rotation:0.0, offset:[0,dev_canvas.height], moving:false};
 
 dev_canvas.onwheel = (event) => {
+        let real_pointing_pos = pixelsToPos([event.clientX, event.clientY]);
         map.zoom += event.deltaY * -0.0001;
         map.zoom = Math.min(Math.max(0.05, map.zoom), 10);
+        let new_pointing_pixels = posToPixels(real_pointing_pos);
+        map.offset[0] += -new_pointing_pixels[0] + event.clientX;
+        map.offset[1] += -new_pointing_pixels[1] + event.clientY;
 }
 dev_canvas.onmousedown = () => {
         map.moving = true;
