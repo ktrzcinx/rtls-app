@@ -160,6 +160,51 @@ impl DeviceData {
         dev.trace.push_back(pos);
         dev
     }
+
+    pub fn calc_position(&self, measures: &Vec<&MeasureList>,
+            devices: &Vec<&DeviceData>, timestamp: u32) -> Trace
+    {
+        // new position calculation or extrapolation when calculation is fresher than measurements
+        // fake calculation or estimation when calculation is fresher than measurements
+        //todo: Add position calculation
+        let mut new_pos = self.trace.front().unwrap().clone();
+        new_pos.cord[0] += 0.35;
+        new_pos.cord[1] += 0.55;
+        if new_pos.cord[0] > 700.0 {
+            new_pos.cord[0] = 0.0;
+        }
+        if new_pos.cord[1] > 700.0 {
+            new_pos.cord[1] = 0.0;
+        }
+        new_pos.timestamp = timestamp;
+        new_pos
+    }
+
+    pub fn estimate_position(&self, timestamp: u32) -> Trace
+    {
+        let mut pos = *self.trace.front().unwrap();
+        pos.timestamp = timestamp;
+        pos
+    }
+
+    pub fn save_position(&mut self, pos: Trace)
+    {
+        // limit trace length
+        while self.trace.len() + 1 >= POSITION_TRACE_DEPTH {
+            self.trace.pop_back();
+        }
+        self.trace.push_front(pos);
+    }
+}
+
+impl Device {
+    pub fn new(dev: &DeviceData, timestamp: u32) -> Device {
+        Device {
+            id: dev.id,
+            pos: dev.estimate_position(timestamp),
+            timestamp: timestamp,
+        }
+    }
 }
 
 impl Zone {
@@ -179,26 +224,49 @@ impl Zone {
         console_log!("New device {} at position {}, {}, {}", id, x, y, z);
     }
 
+    fn calc_dev_position(&self, dev: &DeviceData, timestamp: u32) -> Trace
+    {
+        let measures: Vec<&MeasureList> = self.measures.iter()
+            .filter(|&x| (x.dev[0] == dev.id || x.dev[1] == dev.id))
+            .collect();
+        let connected_devices_id: Vec<u32> = measures.iter()
+            .map(|x| if x.dev[0] == dev.id { x.dev[1] } else { x.dev[0] } )
+            .collect();
+        let devices: Vec<&DeviceData> = self.devices.iter()
+            .filter(|&x| connected_devices_id.iter().any(|&v| v == x.id))
+            .collect();
+        let pos = dev.calc_position(&measures, &devices, timestamp);
+        pos
+    }
+
+    fn update_dev_position(&mut self, id: u32, timestamp: u32)
+    {
+        let dev_index = self.devices.iter()
+            .position(|x| x.id == id)
+            .unwrap();
+        let pos = self.calc_dev_position(&self.devices[dev_index], timestamp);
+        self.devices[dev_index].save_position(pos);
+    }
+
     pub fn add_measure(&mut self, id1: u32, id2: u32, distance: f32, timestamp: u32) {
-        let lo = min(id1, id2);
-        let hi = max(id1, id2);
-        self.devices.iter_mut()
-            .filter(|x| x.id == lo || x.id == hi)
-            .for_each(|x| x.timestamp = timestamp);
+        let id = [min(id1, id2), max(id1, id2)];
         let ml = self.measures.iter_mut()
-            .find(|x| x.dev[0] == lo && x.dev[1] == hi);
+            .find(|x| x.dev[0] == id[0] && x.dev[1] == id[1]);
         let meas = Measure{
             distance: distance,
-            id: [lo, hi],
+            id: [id[0], id[1]],
             timestamp: timestamp,
         };
         match ml {
             Some(l) => {
-                console_log!("Measure update {}-{} {}!", lo, hi, meas.distance);
+                console_log!("Measure update {}-{} {}!", id[0], id[1], meas.distance);
                 l.update(meas);
+                for &i in id.iter() {
+                    self.update_dev_position(i, timestamp);
+                }
             },
             None => {
-                console_log!("New connection {}-{} {}!", lo, hi, meas.distance);
+                console_log!("New connection {}-{} {}!", id[0], id[1], meas.distance);
                 let new_ml = MeasureList::new(meas);
                 self.measures.push(new_ml);
             },
@@ -210,29 +278,13 @@ impl Zone {
         dev.unwrap()
     }
 
-    pub fn calculate_device_position(&mut self, id: u32, timestamp: u32) -> JsValue {
-        let connected_devices_id: Vec<u32> = self.measures.iter()
-            .filter(|&x| (x.dev[0] == id || x.dev[1] == id))
-            .map(|x| if x.dev[0] == id { x.dev[1] } else { x.dev[0] } )
-            .collect();
-        let connected_devices: Vec<&Device> = self.devices.iter()
-            .filter(|&x| connected_devices_id.iter().any(|&v| v == x.id))
-            .collect();
-        assert_ne!(connected_devices.len(), 0);
-        let dev = self._get_device(id);
-        while dev.trace.len() + 1 >= POSITION_TRACE_DEPTH {
-            dev.trace.pop_back();
+    pub fn get_all_devices_position(&mut self, timestamp: u32) -> JsValue {
+        let mut pos: Vec<Device> = Vec::new();
+        pos.reserve(self.devices.len());
+        for dev in self.devices.iter() {
+            pos.push(Device::new(dev, timestamp));
         }
-        // fake calculation
-        let mut last_pos = dev.trace.front().unwrap().clone();
-        last_pos.cord[1] += 0.5;
-        if last_pos.cord[1] > 500.0 {
-            last_pos.cord[1] = 0.0;
-        }
-        last_pos.timestamp = timestamp;
-        //todo: Add position calculation
-        dev.trace.push_front(last_pos);
-        JsValue::from_serde(&last_pos).unwrap()
+        JsValue::from_serde(&pos).unwrap()
     }
 }
 
