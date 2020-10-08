@@ -70,6 +70,14 @@ pub struct Trace {
 #[wasm_bindgen]
 #[derive(Serialize, Deserialize)]
 pub struct Device {
+    pos: Trace,
+    id: u32,
+    timestamp: u32, // last activity timestamp
+}
+
+#[wasm_bindgen]
+#[derive(Serialize, Deserialize)]
+pub struct DeviceData {
     trace: VecDeque<Trace>,
     id: u32,
     timestamp: u32, // last activity timestamp
@@ -93,7 +101,7 @@ pub struct MeasureList {
 pub struct Zone {
     id: i32,
     measures: Vec<MeasureList>,
-    devices: Vec<Device>,
+    devices: Vec<DeviceData>,
 }
 
 //
@@ -134,17 +142,17 @@ impl MeasureList {
     }
 }
 
-impl Device {
-    pub fn new(id: u32) -> Device {
-        Device::new_with_pos(id, 0, 0, 0)
+impl DeviceData {
+    pub fn new(id: u32) -> DeviceData {
+        DeviceData::new_with_pos(id, 0, 0, 0)
     }
 
-    pub fn new_with_pos(id: u32, x: i32, y: i32, z: i32) -> Device {
+    pub fn new_with_pos(id: u32, x: i32, y: i32, z: i32) -> DeviceData {
         let pos = Trace {
                 timestamp: 0,
                 cord: [x as f32, y as f32, z as f32],
             };
-        let mut dev = Device {
+        let mut dev = DeviceData {
             id: id,
             timestamp: 0,
             trace: VecDeque::with_capacity(POSITION_TRACE_DEPTH),
@@ -155,7 +163,7 @@ impl Device {
 }
 
 impl Zone {
-    pub fn _get_device(&mut self, id: u32) -> &mut Device {
+    pub fn _get_device(&mut self, id: u32) -> &mut DeviceData {
         let dev = self.devices.iter_mut().find(|x| x.id == id);
         dev.unwrap()
     }
@@ -166,7 +174,7 @@ impl Zone {
     pub fn add_device(&mut self, id: u32, x: i32, y: i32, z: i32) {
         let count = self.devices.iter().filter(|x| x.id == id).count();
         assert_eq!(count, 0);
-        let dev = Device::new_with_pos(id, x, y, z);
+        let dev = DeviceData::new_with_pos(id, x, y, z);
         self.devices.push(dev);
         console_log!("New device {} at position {}, {}, {}", id, x, y, z);
     }
@@ -197,7 +205,7 @@ impl Zone {
         }
     }
 
-    pub fn get_device_ptr(&self, id: u32) -> *const Device {
+    pub fn get_device_ptr(&self, id: u32) -> *const DeviceData {
         let dev = self.devices.iter().find(|x| x.id == id);
         dev.unwrap()
     }
@@ -232,9 +240,9 @@ impl Zone {
 // Implement WASM functions
 //
 #[wasm_bindgen]
-pub fn device_serialize(dev: *const Device) -> JsValue {
+pub fn device_serialize(dev: *const DeviceData) -> JsValue {
     unsafe {
-        let d: &Device = &*dev;
+        let d: &DeviceData = &*dev;
         JsValue::from_serde(&*d).unwrap()
     }
 }
@@ -247,7 +255,7 @@ pub fn init() -> Zone {
         measures:   Vec::new(),
         devices:    Vec::new(),
     };
-    let test_device = Device::new(0);
+    let test_device = DeviceData::new(0);
     zone.devices.push(test_device);
     zone
 }
